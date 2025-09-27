@@ -104,15 +104,15 @@ app.get('/dbcheck', async (req, res) => {
 // handler that returns 500 JSON instead of crashing the function.
 ;(async () => {
   const routes = [
-    ["/api/trees", "../src/routes/trees.js"],
-    ["/api/treepictures", "../src/routes/treepictures.js"],
-    ["/api/roads", "../src/routes/roads.js"],
-    ["/api/roadpictures", "../src/routes/roadpictures.js"],
-    ["/api/register", "../src/routes/register.js"],
-    ["/api/login", "../src/routes/login.js"],
-    ["/api/reports", "../src/routes/reports.js"],
-    ["/api/reportpictures", "../src/routes/reportpictures.js"],
-    ["/api/profile", "../src/routes/profile.js"],
+    ["/api/trees", "/src/routes/trees.js"],
+    ["/api/treepictures", "/src/routes/treepictures.js"],
+    ["/api/roads", "/src/routes/roads.js"],
+    ["/api/roadpictures", "/src/routes/roadpictures.js"],
+    ["/api/register", "/src/routes/register.js"],
+    ["/api/login", "/src/routes/login.js"],
+    ["/api/reports", "/src/routes/reports.js"],
+    ["/api/reportpictures", "/src/routes/reportpictures.js"],
+    ["/api/profile", "/src/routes/profile.js"],
   ];
 
   for (const [mount, modPath] of routes) {
