@@ -1,15 +1,8 @@
 import 'dotenv/config';
 import express from "express";
 import prisma from "../src/prismaClient.js";
-import registerRoute from "../src/routes/register.js";
-import loginRoute from "../src/routes/login.js";
-import profileRoute from "../src/routes/profile.js";
-import treesRoute from "../src/routes/trees.js";
-import treePicturesRoute from "../src/routes/treepictures.js";
-import roadsRoute from "../src/routes/roads.js";
-import roadPicturesRoute from "../src/routes/roadpictures.js";
-import reportsRoute from "../src/routes/reports.js";
-import reportPicturesRoute from "../src/routes/reportpictures.js";
+// Route modules will be imported dynamically to avoid module-load crashes
+// bringing down the whole serverless function.
 import cors from "cors";
 import path from "path";
 import serverless from "serverless-http";
@@ -100,16 +93,34 @@ app.get('/dbcheck', async (req, res) => {
   }
 });
 
-app.use("/api/trees", treesRoute);
-app.use("/api/treepictures", treePicturesRoute);
-app.use("/api/roads", roadsRoute);
-app.use("/api/roadpictures", roadPicturesRoute);
-app.use("/api/roads", roadPicturesRoute);
-app.use("/api/register", registerRoute);
-app.use("/api/login", loginRoute);
-app.use("/api/reports", reportsRoute);
-app.use("/api/reportpictures", reportPicturesRoute);
-app.use("/api/profile", profileRoute);
+// Dynamically register routes; if a module fails to load, mount a fallback
+// handler that returns 500 JSON instead of crashing the function.
+;(async () => {
+  const routes = [
+    ["/api/trees", "../src/routes/trees.js"],
+    ["/api/treepictures", "../src/routes/treepictures.js"],
+    ["/api/roads", "../src/routes/roads.js"],
+    ["/api/roadpictures", "../src/routes/roadpictures.js"],
+    ["/api/register", "../src/routes/register.js"],
+    ["/api/login", "../src/routes/login.js"],
+    ["/api/reports", "../src/routes/reports.js"],
+    ["/api/reportpictures", "../src/routes/reportpictures.js"],
+    ["/api/profile", "../src/routes/profile.js"],
+  ];
+
+  for (const [mount, modPath] of routes) {
+    try {
+      const mod = await import(modPath);
+      const router = mod.default || mod;
+      if (!router) throw new Error(`Module ${modPath} did not export a router`);
+      app.use(mount, router);
+      console.info(`Mounted ${modPath} at ${mount}`);
+    } catch (err) {
+      console.error(`Failed to mount ${modPath} at ${mount}:`, err && err.message ? err.message : err);
+      app.use(mount, (req, res) => res.status(500).json({ error: `Service temporarily unavailable (${mount})` }));
+    }
+  }
+})();
 
 export default app;
 
