@@ -27,11 +27,18 @@ function enumToHex(colorEnum) {
 
 // GET /api/roads
 router.get("/", async (req, res) => {
+  const start = Date.now();
   try {
-    // By default, avoid returning the full `trees` arrays (can be large).
-    // Return a treesCount instead. If client requests full data, pass ?full=true
+    // Support pagination to avoid returning huge payloads.
     const includeFull = req.query.full === 'true';
-    const roads = await prisma.road.findMany({ include: { roadPictures: true, trees: includeFull } });
+    const rawLimit = parseInt(req.query.limit || '0', 10) || 0;
+    const limit = Math.min(Math.max(rawLimit, 0), 1000);
+    const page = Math.max(parseInt(req.query.page || '1', 10) || 1, 1);
+    // If client asked for full trees and didn't provide a limit, set a safe default
+    const effectiveLimit = includeFull && limit === 0 ? 200 : limit || undefined;
+    const skip = effectiveLimit ? (page - 1) * effectiveLimit : undefined;
+
+    const roads = await prisma.road.findMany({ include: { roadPictures: true, trees: includeFull }, take: effectiveLimit, skip });
 
     const withHex = roads.map((r) => {
       const base = { ...r, color_hex: enumToHex(r.color) };
@@ -43,9 +50,12 @@ router.get("/", async (req, res) => {
       return base;
     });
     res.json(withHex);
+    const took = Date.now() - start;
+    console.info(`GET /api/roads returned ${withHex.length} roads (full=${includeFull}) in ${took}ms`);
   } catch (error) {
     console.error('GET /api/roads error:', error && error.message ? error.message : error);
-    res.status(500).json({ error: "Failed to fetch roads" });
+    const safeMessage = process.env.NODE_ENV === 'production' ? 'Failed to fetch roads' : (error && error.message ? error.message : String(error));
+    res.status(500).json({ error: safeMessage });
   }
 });
 
