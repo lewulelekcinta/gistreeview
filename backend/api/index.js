@@ -103,28 +103,42 @@ app.get('/dbcheck', async (req, res) => {
 // Dynamically register routes; if a module fails to load, mount a fallback
 // handler that returns 500 JSON instead of crashing the function.
 ;(async () => {
+  console.log('Starting routes setup...');
+  console.log('Current working directory:', process.cwd());
+  console.log('__dirname:', __dirname);
+  
   const routes = [
-    ["/api/trees", "/src/routes/trees.js"],
-    ["/api/treepictures", "/src/routes/treepictures.js"],
-    ["/api/roads", "/src/routes/roads.js"],
-    ["/api/roadpictures", "/src/routes/roadpictures.js"],
-    ["/api/register", "/src/routes/register.js"],
-    ["/api/login", "/src/routes/login.js"],
-    ["/api/reports", "/src/routes/reports.js"],
-    ["/api/reportpictures", "/src/routes/reportpictures.js"],
-    ["/api/profile", "/src/routes/profile.js"],
+    ["/api/trees", "../../src/routes/trees.js"],
+    ["/api/treepictures", "../../src/routes/treepictures.js"],
+    ["/api/roads", "../../src/routes/roads.js"],
+    ["/api/roadpictures", "../../src/routes/roadpictures.js"],
+    ["/api/register", "../../src/routes/register.js"],
+    ["/api/login", "../../src/routes/login.js"],
+    ["/api/reports", "../../src/routes/reports.js"],
+    ["/api/reportpictures", "../../src/routes/reportpictures.js"],
+    ["/api/profile", "../../src/routes/profile.js"],
   ];
 
   for (const [mount, modPath] of routes) {
     try {
+      console.log(`Attempting to import ${modPath}...`);
       const mod = await import(modPath);
+      console.log(`Successfully imported ${modPath}`);
       const router = mod.default || mod;
       if (!router) throw new Error(`Module ${modPath} did not export a router`);
       app.use(mount, router);
       console.info(`Mounted ${modPath} at ${mount}`);
     } catch (err) {
-      console.error(`Failed to mount ${modPath} at ${mount}:`, err && err.message ? err.message : err);
-      app.use(mount, (req, res) => res.status(500).json({ error: `Service temporarily unavailable (${mount})` }));
+      console.error(`Failed to mount ${modPath} at ${mount}:`, err);
+      console.error('Error details:', {
+        message: err.message,
+        stack: err.stack,
+        code: err.code
+      });
+      app.use(mount, (req, res) => res.status(500).json({ 
+        error: `Service temporarily unavailable (${mount})`,
+        details: process.env.NODE_ENV === 'development' ? err.message : undefined
+      }));
     }
   }
 })();
