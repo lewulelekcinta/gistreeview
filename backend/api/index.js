@@ -121,9 +121,14 @@ app.get('/dbcheck', async (req, res) => {
   
   const routes = [
     ["/api/trees", "./routes/trees.js"],
+    ["/api/treepictures", "./routes/treepictures.js"],
     ["/api/roads", "./routes/roads.js"],
+    ["/api/roadpictures", "./routes/roadpictures.js"],
+    ["/api/reports", "./routes/reports.js"],
+    ["/api/reportpictures", "./routes/reportpictures.js"],
     ["/api/register", "./routes/register.js"],
-    ["/api/login", "./routes/login.js"]
+    ["/api/login", "./routes/login.js"],
+    ["/api/profile", "./routes/profile.js"]
   ];
 
   for (const [mount, modPath] of routes) {
