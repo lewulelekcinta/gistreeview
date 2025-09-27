@@ -14,7 +14,22 @@ export const API_BASE = (() => {
   const maybeGlobal = (globalThis as unknown as { VITE_API_BASE?: string })
     .VITE_API_BASE;
   const resolved = v || maybeGlobal;
-  if (resolved) return resolved;
+  if (resolved) {
+    // Debug: show where API_BASE came from
+    try {
+      console.info('[config] API_BASE resolved:', resolved);
+    } catch (e) {
+      void e;
+    }
+    return resolved;
+  }
+
+  // Debug: no env/global found - falling back to localhost for dev
+  try {
+    console.warn('[config] API_BASE not set via import.meta.env or globalThis. Falling back to http://localhost:4000');
+  } catch (e) {
+    void e;
+  }
 
   // Fallback to localhost for dev
   return "http://localhost:4000";
