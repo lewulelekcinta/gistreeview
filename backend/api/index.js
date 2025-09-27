@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import express from "express";
-import { PrismaClient } from "@prisma/client";
+import prisma from "../src/prismaClient.js";
 import registerRoute from "../src/routes/register.js";
 import loginRoute from "../src/routes/login.js";
 import profileRoute from "../src/routes/profile.js";
@@ -15,7 +15,7 @@ import path from "path";
 import serverless from "serverless-http";
 
 const app = express();
-const prisma = new PrismaClient();
+// Use shared prisma client from src/prismaClient.js
 
 // Configure CORS origins via env var for easier deployment configuration on Vercel.
 // Set ALLOWED_ORIGINS as a comma-separated list (e.g. "https://my-frontend.vercel.app,https://other.com").
