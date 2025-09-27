@@ -1,6 +1,13 @@
 import 'dotenv/config';
 import express from "express";
 import prisma from "../src/prismaClient.js";
+// Global process-level handlers to capture and log crashes early in startup.
+process.on('uncaughtException', (err) => {
+  console.error('UNCAUGHT EXCEPTION:', err && err.stack ? err.stack : err);
+});
+process.on('unhandledRejection', (reason) => {
+  console.error('UNHANDLED REJECTION:', reason && reason.stack ? reason.stack : reason);
+});
 // Route modules will be imported dynamically to avoid module-load crashes
 // bringing down the whole serverless function.
 import cors from "cors";

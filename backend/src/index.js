@@ -42,7 +42,17 @@ app.get("/", (req, res) => {
   res.json({ message: "Backend API is running" });
 });
 
-// (diagnostic code removed)
+// Diagnostic endpoint: quick DB connectivity check using Prisma.
+app.get('/dbcheck', async (req, res) => {
+  try {
+    // a harmless quick query
+    const now = await prisma.$queryRaw`SELECT 1 as ok`;
+    res.json({ ok: true, now });
+  } catch (err) {
+    console.error('DB check failed', err && err.message ? err.message : err);
+    res.status(500).json({ ok: false, error: err && err.message ? err.message : String(err) });
+  }
+});
 
 // Example: get all trees (assuming model Tree exists)
 app.get("/trees", async (req, res) => {

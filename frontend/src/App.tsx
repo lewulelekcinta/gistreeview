@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import ScrollToTop from "./components/common/ScrollToTop";
+import BackendSelector from "./components/BackendSelector";
 import AppLayout from "./layout/AppLayout";
 import Login from "./pages/AuthPages/Login";
 import Register from "./pages/AuthPages/Register";
@@ -25,6 +26,7 @@ export default function App() {
   return (
     <Router>
       <ScrollToTop />
+      <BackendSelector />
       <Routes>
         <Route path="/" element={<Login />} />
         <Route path="/register" element={<Register />} />
