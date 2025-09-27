@@ -53,7 +53,20 @@ const corsOptions = {
   }
 };
 
-app.use(cors(corsOptions));
+// If operator wants to temporarily allow any origin (for debugging or staging),
+// set ALLOW_ALL_ORIGINS=1 in Vercel Environment Variables. This will enable
+// permissive CORS for testing. Otherwise use the stricter corsOptions above.
+if (process.env.ALLOW_ALL_ORIGINS === '1') {
+  console.info('ALLOW_ALL_ORIGINS=1 set — enabling permissive CORS for all origins (temporary debug mode)');
+  app.use((req, res, next) => {
+    const origin = req.headers.origin;
+    console.info('Incoming request origin:', origin);
+    next();
+  });
+  app.use(cors({ origin: true }));
+} else {
+  app.use(cors(corsOptions));
+}
 app.use(express.json());
 app.use(
   "/uploads",
