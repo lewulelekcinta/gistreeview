@@ -56,21 +56,37 @@ router.get("/", async (req, res) => {
 // geom-population migration step.
 router.get("/geojson", async (req, res) => {
   try {
+    const start = Date.now();
+    // limit/offset to avoid huge payloads (optional)
+    const limit = Math.min(Math.max(parseInt(req.query.limit || '0', 10) || 0, 0), 1000);
+    const page = Math.max(parseInt(req.query.page || '1', 10) || 1, 1);
+    const offset = limit > 0 ? (page - 1) * limit : 0;
+
     // Try to retrieve ST_AsGeoJSON(geom) (PostGIS) and the JSON geometry column.
     // If the raw query fails (e.g. PostGIS not installed), fall back to reading the
     // JSON `geometry` column via Prisma so we return a safe FeatureCollection.
     let rows;
     try {
-      rows = await prisma.$queryRaw`
-        SELECT id, nameroad, description, color, status, ST_AsGeoJSON(geom) AS geom_json, geometry::text AS geometry_json
-        FROM "road"
-        WHERE geom IS NOT NULL OR geometry IS NOT NULL
-      `;
+      // Add LIMIT/OFFSET when provided to avoid returning enormous results
+      if (limit > 0) {
+        rows = await prisma.$queryRaw`
+          SELECT id, nameroad, description, color, status, ST_AsGeoJSON(geom) AS geom_json, geometry::text AS geometry_json
+          FROM "road"
+          WHERE geom IS NOT NULL OR geometry IS NOT NULL
+          LIMIT ${limit} OFFSET ${offset}
+        `;
+      } else {
+        rows = await prisma.$queryRaw`
+          SELECT id, nameroad, description, color, status, ST_AsGeoJSON(geom) AS geom_json, geometry::text AS geometry_json
+          FROM "road"
+          WHERE geom IS NOT NULL OR geometry IS NOT NULL
+        `;
+      }
     } catch (rawErr) {
       console.warn('roads.geojson: raw query failed, falling back to prisma.findMany:', rawErr && rawErr.message ? rawErr.message : rawErr);
       // Fallback: use Prisma to read the JSON geometry column (if present).
-  const fallback = await prisma.road.findMany({ where: { geometry: { not: null } }, select: { id: true, nameroad: true, description: true, color: true, status: true, geometry: true } });
-  rows = fallback.map((r) => ({ id: r.id, nameroad: r.nameroad, description: r.description, color: r.color, status: r.status, geom_json: null, geometry_json: JSON.stringify(r.geometry) }));
+      const fallback = await prisma.road.findMany({ where: { geometry: { not: null } }, select: { id: true, nameroad: true, description: true, color: true, status: true, geometry: true }, take: limit > 0 ? limit : undefined, skip: offset > 0 ? offset : undefined });
+      rows = fallback.map((r) => ({ id: r.id, nameroad: r.nameroad, description: r.description, color: r.color, status: r.status, geom_json: null, geometry_json: JSON.stringify(r.geometry) }));
     }
 
     // Fetch roadPictures and trees for all ids in a single query to avoid N+1
@@ -115,9 +131,12 @@ router.get("/geojson", async (req, res) => {
     });
 
     res.json({ type: 'FeatureCollection', features });
+    const took = Date.now() - start;
+    console.info(`GET /api/roads/geojson returned ${features.length} features in ${took}ms`);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Failed to fetch roads as GeoJSON' });
+    console.error('GET /api/roads/geojson error:', error && error.message ? error.message : error);
+    const safeMessage = process.env.NODE_ENV === 'production' ? 'Failed to fetch roads as GeoJSON' : (error && error.message ? error.message : String(error));
+    res.status(500).json({ error: safeMessage });
   }
 });
 
@@ -125,19 +144,34 @@ router.get("/geojson", async (req, res) => {
 // Returns roads as GeoJSON with an aggregated treesCount (number of trees attached to each road)
 router.get('/with-treecount', async (req, res) => {
   try {
+    const start = Date.now();
+    // limit/offset support to avoid huge results
+    const limit = Math.min(Math.max(parseInt(req.query.limit || '0', 10) || 0, 0), 1000);
+    const page = Math.max(parseInt(req.query.page || '1', 10) || 1, 1);
+    const offset = limit > 0 ? (page - 1) * limit : 0;
+
     // Get road geometries. Try raw PostGIS ST_AsGeoJSON first; fall back to reading
     // `geometry` JSON column if the raw query fails (PostGIS missing or other SQL error).
     let rows;
     try {
-      rows = await prisma.$queryRaw`
-        SELECT id, nameroad, description, color, status, ST_AsGeoJSON(geom) AS geom_json, geometry::text AS geometry_json
-        FROM "road"
-        WHERE geom IS NOT NULL OR geometry IS NOT NULL
-      `;
+      if (limit > 0) {
+        rows = await prisma.$queryRaw`
+          SELECT id, nameroad, description, color, status, ST_AsGeoJSON(geom) AS geom_json, geometry::text AS geometry_json
+          FROM "road"
+          WHERE geom IS NOT NULL OR geometry IS NOT NULL
+          LIMIT ${limit} OFFSET ${offset}
+        `;
+      } else {
+        rows = await prisma.$queryRaw`
+          SELECT id, nameroad, description, color, status, ST_AsGeoJSON(geom) AS geom_json, geometry::text AS geometry_json
+          FROM "road"
+          WHERE geom IS NOT NULL OR geometry IS NOT NULL
+        `;
+      }
     } catch (rawErr) {
       console.warn('roads.with-treecount: raw query failed, falling back to prisma.findMany:', rawErr && rawErr.message ? rawErr.message : rawErr);
-  const fallback = await prisma.road.findMany({ where: { geometry: { not: null } }, select: { id: true, nameroad: true, description: true, color: true, status: true, geometry: true } });
-  rows = fallback.map((r) => ({ id: r.id, nameroad: r.nameroad, description: r.description, color: r.color, status: r.status, geom_json: null, geometry_json: JSON.stringify(r.geometry) }));
+      const fallback = await prisma.road.findMany({ where: { geometry: { not: null } }, select: { id: true, nameroad: true, description: true, color: true, status: true, geometry: true }, take: limit > 0 ? limit : undefined, skip: offset > 0 ? offset : undefined });
+      rows = fallback.map((r) => ({ id: r.id, nameroad: r.nameroad, description: r.description, color: r.color, status: r.status, geom_json: null, geometry_json: JSON.stringify(r.geometry) }));
     }
 
     const ids = rows.map((r) => r.id);
@@ -198,11 +232,13 @@ router.get('/with-treecount', async (req, res) => {
         geometry,
       };
     });
-
     res.json({ type: 'FeatureCollection', features });
+    const took = Date.now() - start;
+    console.info(`GET /api/roads/with-treecount returned ${features.length} features in ${took}ms`);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Failed to fetch roads with tree counts' });
+    console.error('GET /api/roads/with-treecount error:', error && error.message ? error.message : error);
+    const safeMessage = process.env.NODE_ENV === 'production' ? 'Failed to fetch roads with tree counts' : (error && error.message ? error.message : String(error));
+    res.status(500).json({ error: safeMessage });
   }
 });
 

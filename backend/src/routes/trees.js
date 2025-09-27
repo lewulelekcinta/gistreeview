@@ -62,13 +62,18 @@ router.post(
 
 // GET /api/trees - ambil semua data pohon
 router.get("/", async (req, res) => {
+  const start = Date.now();
   try {
     const trees = await prisma.tree.findMany({
       include: { road: true, treePictures: true },
     });
     res.json(trees);
+    const took = Date.now() - start;
+    console.info(`GET /api/trees returned ${trees.length} trees in ${took}ms`);
   } catch (err) {
-    res.status(500).json({ error: "Gagal mengambil data pohon" });
+    console.error('GET /api/trees error:', err && err.message ? err.message : err, err && err.stack ? err.stack : 'no-stack');
+    const safeMessage = process.env.NODE_ENV === 'production' ? 'Gagal mengambil data pohon' : (err && err.message ? err.message : String(err));
+    res.status(500).json({ error: safeMessage });
   }
 });
 
