@@ -1,6 +1,18 @@
 import 'dotenv/config';
 import express from "express";
-import prisma from "../src/prismaClient.js";
+import { PrismaClient } from "@prisma/client";
+
+const prisma = new PrismaClient();
+
+// Test database connection
+prisma.$connect()
+  .then(() => {
+    console.log('Successfully connected to database');
+  })
+  .catch((err) => {
+    console.error('Failed to connect to database:', err);
+  });
+
 // Global process-level handlers to capture and log crashes early in startup.
 process.on('uncaughtException', (err) => {
   console.error('UNCAUGHT EXCEPTION:', err && err.stack ? err.stack : err);
@@ -107,16 +119,9 @@ app.get('/dbcheck', async (req, res) => {
   console.log('Current working directory:', process.cwd());
   console.log('__dirname:', __dirname);
   
+  // Simplify routes - start with just trees for testing
   const routes = [
-    ["/api/trees", "../../src/routes/trees.js"],
-    ["/api/treepictures", "../../src/routes/treepictures.js"],
-    ["/api/roads", "../../src/routes/roads.js"],
-    ["/api/roadpictures", "../../src/routes/roadpictures.js"],
-    ["/api/register", "../../src/routes/register.js"],
-    ["/api/login", "../../src/routes/login.js"],
-    ["/api/reports", "../../src/routes/reports.js"],
-    ["/api/reportpictures", "../../src/routes/reportpictures.js"],
-    ["/api/profile", "../../src/routes/profile.js"],
+    ["/api/trees", "./routes/trees.js"],
   ];
 
   for (const [mount, modPath] of routes) {
