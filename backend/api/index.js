@@ -119,9 +119,11 @@ app.get('/dbcheck', async (req, res) => {
   console.log('Current working directory:', process.cwd());
   console.log('__dirname:', __dirname);
   
-  // Simplify routes - start with just trees for testing
   const routes = [
     ["/api/trees", "./routes/trees.js"],
+    ["/api/roads", "./routes/roads.js"],
+    ["/api/register", "./routes/register.js"],
+    ["/api/login", "./routes/login.js"]
   ];
 
   for (const [mount, modPath] of routes) {
