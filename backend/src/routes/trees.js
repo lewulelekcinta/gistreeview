@@ -71,9 +71,8 @@ router.get("/", async (req, res) => {
     console.info(`GET /api/trees returned ${trees.length} trees in ${took}ms`);
   } catch (err) {
     console.error('GET /api/trees error:', err && err.message ? err.message : err, err && err.stack ? err.stack : 'no-stack');
-    // Temporary: include error details in response to help debugging on deployed Vercel instance.
-    // NOTE: revert this change after root cause is identified to avoid leaking internals.
-    res.status(500).json({ error: err && err.message ? err.message : String(err), stack: err && err.stack ? err.stack : undefined });
+    const safeMessage = process.env.NODE_ENV === 'production' ? 'Gagal mengambil data pohon' : (err && err.message ? err.message : String(err));
+    res.status(500).json({ error: safeMessage });
   }
 });
 
