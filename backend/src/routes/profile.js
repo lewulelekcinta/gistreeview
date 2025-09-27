@@ -86,8 +86,6 @@ router.delete("/:id", async (req, res) => {
   }
 });
 
-export default router;
-
 // Upload avatar (userpic) for user
 
 router.patch("/:id/avatar", uploadAvatar.single("avatar"), async (req, res) => {
@@ -107,3 +105,5 @@ router.patch("/:id/avatar", uploadAvatar.single("avatar"), async (req, res) => {
     res.status(500).json({ error: "Failed to update avatar" });
   }
 });
+
+export default router;

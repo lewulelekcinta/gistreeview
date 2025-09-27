@@ -28,11 +28,23 @@ function enumToHex(colorEnum) {
 // GET /api/roads
 router.get("/", async (req, res) => {
   try {
-    const roads = await prisma.road.findMany({ include: { roadPictures: true, trees: true } });
-    // include color_hex for frontend convenience
-    const withHex = roads.map((r) => ({ ...r, color_hex: enumToHex(r.color) }));
+    // By default, avoid returning the full `trees` arrays (can be large).
+    // Return a treesCount instead. If client requests full data, pass ?full=true
+    const includeFull = req.query.full === 'true';
+    const roads = await prisma.road.findMany({ include: { roadPictures: true, trees: includeFull } });
+
+    const withHex = roads.map((r) => {
+      const base = { ...r, color_hex: enumToHex(r.color) };
+      if (!includeFull) {
+        // replace trees array with count to reduce payload
+        base.trees = undefined;
+        base.treesCount = Array.isArray(r.trees) ? r.trees.length : 0;
+      }
+      return base;
+    });
     res.json(withHex);
   } catch (error) {
+    console.error('GET /api/roads error:', error && error.message ? error.message : error);
     res.status(500).json({ error: "Failed to fetch roads" });
   }
 });
